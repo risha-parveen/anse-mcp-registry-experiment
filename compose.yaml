@@ -1,0 +1,76 @@
+name: anse-registry-experiment
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    environment:
+      POSTGRES_DB: registry
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - registry-data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U registry -d registry"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  mcp-demo:
+    build:
+      context: ./live-demo
+    volumes:
+      - ./live-demo/tls:/tls:ro
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/server.crt
+    networks:
+      demo:
+        aliases: [mcp-demo.internal]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  registry:
+    image: ghcr.io/modelcontextprotocol/registry@sha256:940b1d98330ca0b418a079926ba557be551ec715d3245441154d541ae71b409f
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MCP_REGISTRY_DATABASE_URL: postgres://registry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/registry?sslmode=disable
+      MCP_REGISTRY_JWT_PRIVATE_KEY: ${REGISTRY_SIGNING_SEED:?Set REGISTRY_SIGNING_SEED}
+      MCP_REGISTRY_GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-Iv23licy3GSiM9Km5jtd}
+      MCP_REGISTRY_ENABLE_ANONYMOUS_AUTH: "false"
+      MCP_REGISTRY_OIDC_ENABLED: "false"
+      MCP_REGISTRY_GITHUB_OIDC_AUDIENCE: ""
+      MCP_REGISTRY_ENABLE_REGISTRY_VALIDATION: "true"
+      MCP_REGISTRY_SEED_FROM: ""
+    networks: [backend, database, egress]
+    restart: unless-stopped
+  gateway:
+    build:
+      context: .
+    depends_on: [registry]
+    environment:
+      REGISTRY_UPSTREAM: http://registry:8080
+      REGISTRY_PUBLIC_KEY: ${REGISTRY_PUBLIC_KEY:?Set REGISTRY_PUBLIC_KEY}
+      REGISTRY_READERS: ${REGISTRY_READERS:-}
+      REGISTRY_PUBLISHERS: ${REGISTRY_PUBLISHERS:-}
+      ALLOWED_REMOTE_DOMAINS: ${ALLOWED_REMOTE_DOMAINS:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-Iv23licy3GSiM9Km5jtd}
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks: [backend, frontend, demo]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+networks:
+  backend:
+    internal: true
+  database:
+    internal: true
+  egress: {}
+  frontend: {}
+  demo:
+    internal: true
+volumes:
+  registry-data: {}

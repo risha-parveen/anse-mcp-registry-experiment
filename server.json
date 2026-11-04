@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.risha-parveen/anse-registry-demo",
+  "description": "ANSE registry test metadata only. The example endpoint is not a deployed MCP server.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://requirements.anse.example/mcp"
+    }
+  ]
+}

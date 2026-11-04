@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.risha-parveen/anse-live-demo",
+  "description": "Live local MCP server for testing private registry discovery and the add operation.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp-demo.internal:8443/mcp"
+    }
+  ]
+}
